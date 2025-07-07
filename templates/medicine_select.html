@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select/Search Medicine - MedDispenser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-box">
+            <h2>Select or Search Medicine</h2>
+            <form method="POST" action="{{ url_for('medicine_select') }}">
+                <div class="input-group">
+                    <label for="searchInput">Search by Brand Name</label>
+                    <input type="text" id="searchInput" name="searchInput" placeholder="Enter medicine brand name...">
+                </div>
+                <button type="submit" class="btn">Search</button>
+            </form>
+            {% if message %}
+                <p>{{ message }}</p>
+            {% endif %}
+            {% if medicines and medicines|length > 0 %}
+            <table class="medicine-table">
+                <thead>
+                    <tr>
+                        <th>Generic Name</th>
+                        <th>Brand Name</th>
+                        <th>Dosage Strength</th>
+                        <th>Dosage Form</th>
+                        <th>Classification</th>
+                        <th>Pharmacologic Category</th>
+                        <th>Manufacturer</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medicine in medicines %}
+                    <tr>
+                        <td>{{ medicine['Generic Name'] }}</td>
+                        <td>{{ medicine['Brand Name'] }}</td>
+                        <td>{{ medicine['Dosage Strength'] }}</td>
+                        <td>{{ medicine['Dosage Form'] }}</td>
+                        <td>{{ medicine['Classification'] }}</td>
+                        <td>{{ medicine['Pharmacologic Category'] }}</td>
+                        <td>{{ medicine['Manufacturer'] }}</td>
+                        <td>
+                            <form method="get" action="{{ url_for('tray_setup') }}" style="display:inline;">
+                                <input type="hidden" name="description" value="{{ medicine['Brand Name'] }} {{ medicine['Dosage Strength'] }} {{ medicine['Dosage Form'] }}">
+                                <button type="submit" class="btn" style="padding:0.3rem 0.7rem; font-size:0.95rem; display:inline-block;">Dispense</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <a href="{{ url_for('dashboard') }}" class="btn blue">Back to Dashboard</a>
+                {% if is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn green">Admin Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

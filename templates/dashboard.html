@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MedDispenser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="content-column">
+            <div class="dashboard-box">
+                <h2>Dashboard</h2>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    <ul class="flashes">
+                      {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                {% endwith %}
+                {% if tray_status and tray_status|length > 0 %}
+                {% for tray in tray_status %}
+                <div class="tray-info">
+                    <h3>Tray {{ tray.tray_number }}</h3>
+                    <p><strong>User:</strong> {{ tray.username }}</p>
+                    <p><strong>Description:</strong> {{ tray.description }}</p>
+                    <p><strong>Next Dispense Time:</strong> {{ tray.next_dispense }}</p>
+                    <p><strong>Dispense Count:</strong> {{ tray.dispense_count }}/30</p>
+                    <div class="countdown-box">
+                        <strong>Countdown:</strong>
+                        <span id="countdown-{{ tray.tray_number }}" class="countdown" data-seconds="{{ tray.countdown }}">
+                        {% if tray.countdown is not none %}
+                            {% set hours = (tray.countdown // 3600) %}
+                            {% set minutes = ((tray.countdown % 3600) // 60) %}
+                            {% set seconds = (tray.countdown % 60) %}
+                            {{ '%02d:%02d:%02d' % (hours, minutes, seconds) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                        </span>
+                    </div>
+                    {% if is_admin %}
+                    <form method="POST" action="{{ url_for('admin_delete_tray') }}" style="margin-top: 10px;">
+                        <input type="hidden" name="tray_number" value="{{ tray.tray_number }}">
+                        <button type="submit" class="btn red" onclick="return confirm('Are you sure you want to delete this tray?')">Delete Tray (Admin)</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <p>No tray status found.</p>
+                {% endif %}
+                <a href="{{ url_for('medicine_select') }}" class="btn green">Select/Search Medicine</a>
+                {% if is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn blue">Admin Dashboard</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="btn logout">Logout</a>
+            </div>
+            {% if dispense_history and dispense_history|length > 0 %}
+            <div class="tray-info">
+                <h3>Recent Dispense History</h3>
+                <table class="medicine-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Tray Number</th>
+                            <th>Medicine</th>
+                            <th>Dispensed At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in dispense_history %}
+                        <tr>
+                            <td>{{ row[0] }}</td>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[3] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    <script>
+    function formatCountdown(seconds) {
+        if (seconds === null || seconds === undefined) return 'N/A';
+        if (seconds <= 0) return 'Due!';
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        var s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    function updateCountdowns() {
+        document.querySelectorAll('.countdown').forEach(function(el) {
+            var seconds = parseInt(el.getAttribute('data-seconds'));
+            if (!isNaN(seconds) && seconds > 0) {
+                seconds--;
+                el.setAttribute('data-seconds', seconds);
+                el.textContent = formatCountdown(seconds);
+            } else if (seconds === 0) {
+                el.textContent = 'Due!';
+            }
+        });
+    }
+    
+    // Initialize countdowns on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.countdown').forEach(function(el) {
+            var seconds = parseInt(el.getAttribute('data-seconds'));
+            el.textContent = formatCountdown(seconds);
+        });
+    });
+    
+    setInterval(updateCountdowns, 1000);
+    </script>
+</body>
+</html> 

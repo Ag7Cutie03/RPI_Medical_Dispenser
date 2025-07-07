@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Admin Reset</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #c82333;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Emergency Admin Password Reset</h1>
+        
+        <div class="warning">
+            <strong>⚠️ WARNING:</strong> This is an emergency function. Only use this if you are completely locked out of the admin account.
+        </div>
+        
+        <p>This will reset the admin password to: <strong>admin123</strong></p>
+        
+        <form method="POST">
+            <button type="submit" class="btn">Reset Admin Password</button>
+        </form>
+        
+        <div class="info">
+            <strong>After reset:</strong>
+            <ul>
+                <li>Username: admin</li>
+                <li>Password: admin123</li>
+                <li>Please change the password immediately after logging in</li>
+            </ul>
+        </div>
+        
+        <p><a href="/login">← Back to Login</a></p>
+    </div>
+</body>
+</html> 

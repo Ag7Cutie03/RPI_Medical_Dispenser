@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MedDispenser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="content-column">
+            <div class="form-box">
+                <h2>Login</h2>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    <ul class="flashes">
+                      {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                {% endwith %}
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="input-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Login</button>
+                </form>
+                <p class="switch-link">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+            </div>
+            {% if tray_status and tray_status|length > 0 %}
+            <div class="form-box">
+                <h3>Tray Status</h3>
+                <table class="medicine-table">
+                    <thead>
+                        <tr>
+                            <th>Tray Number</th>
+                            <th>Medicine</th>
+                            <th>Next Dispense</th>
+                            <th>Dispense Count</th>
+                            <th>Countdown</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tray in tray_status %}
+                        <tr>
+                            <td>{{ tray.tray_number }}</td>
+                            <td>{{ tray.description }}</td>
+                            <td>{{ tray.next_dispense }}</td>
+                            <td>{{ tray.dispense_count }}/30</td>
+                            <td><span class="countdown" data-seconds="{{ tray.countdown }}">{{ tray.countdown }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <script>
+            function formatCountdown(seconds) {
+                if (seconds === null || seconds === undefined) return 'N/A';
+                if (seconds <= 0) return 'Due!';
+                var h = Math.floor(seconds / 3600);
+                var m = Math.floor((seconds % 3600) / 60);
+                var s = seconds % 60;
+                return `${h}h ${m}m ${s}s`;
+            }
+            function updateCountdowns() {
+                document.querySelectorAll('.countdown').forEach(function(el) {
+                    var seconds = parseInt(el.getAttribute('data-seconds'));
+                    if (!isNaN(seconds) && seconds > 0) {
+                        seconds--;
+                        el.setAttribute('data-seconds', seconds);
+                        el.textContent = formatCountdown(seconds);
+                    } else if (seconds === 0) {
+                        el.textContent = 'Due!';
+                    }
+                });
+            }
+            setInterval(updateCountdowns, 1000);
+            document.querySelectorAll('.countdown').forEach(function(el) {
+                var seconds = parseInt(el.getAttribute('data-seconds'));
+                el.textContent = formatCountdown(seconds);
+            });
+            </script>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html> 

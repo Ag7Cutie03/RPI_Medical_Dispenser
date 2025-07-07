@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tray & Medicine Setup - MedDispenser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-box">
+            <h2>Tray & Medicine Setup</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <ul class="flashes">
+                  {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+            <form method="POST" action="{{ url_for('save_dispense_settings') }}">
+                <div class="input-group">
+                    <label for="tray_number">Tray Number</label>
+                    <input type="number" id="tray_number" name="tray_number" min="1" max="2" required>
+                </div>
+                <div class="input-group">
+                    <label for="description">Medicine Description</label>
+                    <input type="text" id="description" name="description" required value="{{ description|default('') }}">
+                </div>
+                <div class="input-group">
+                    <label for="alert">Alert</label>
+                    <select id="alert" name="alert">
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="time">Dispense Time</label>
+                    <input type="datetime-local" id="time" name="time" required>
+                </div>
+                <div class="input-group">
+                    <label for="interval">Interval (hours)</label>
+                    <input type="number" id="interval" name="interval" min="1" required>
+                </div>
+                <div class="input-group">
+                    <label for="color">Tray Color</label>
+                    <input type="color" id="color" name="color" value="#1976d2">
+                </div>
+                <button type="submit" class="btn">Save Settings</button>
+            </form>
+            
+            {% if user_trays and user_trays|length > 0 %}
+                {% if user_trays|length == 1 %}
+                    <!-- Single tray - simple reset button -->
+                    <div style="margin:0.5rem 0; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <strong>Tray {{ user_trays[0][0] }}</strong>: {{ user_trays[0][1] }} 
+                        {% if user_trays[0][3] %}(User: {{ user_trays[0][3] }}){% endif %}
+                        ({{ user_trays[0][2] }}/30 dispenses)
+                        <div style="margin-top:0.5rem;">
+                            <form method="POST" action="{{ url_for('reset_tray') }}" style="display:inline;">
+                                <input type="hidden" name="tray_number" value="{{ user_trays[0][0] }}">
+                                <button type="submit" class="btn red" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Are you sure you want to reset Tray {{ user_trays[0][0] }}?')">
+                                    Reset Tray
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('reset_dispense_count') }}" style="display:inline;">
+                                <input type="hidden" name="tray_number" value="{{ user_trays[0][0] }}">
+                                <button type="submit" class="btn orange" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Reset dispense count for Tray {{ user_trays[0][0] }}?')">
+                                    Reset Count
+                                </button>
+                            </form>
+                            {% if is_admin %}
+                            <form method="POST" action="{{ url_for('admin_delete_tray') }}" style="display:inline;">
+                                <input type="hidden" name="tray_number" value="{{ user_trays[0][0] }}">
+                                <button type="submit" class="btn red" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Are you sure you want to delete Tray {{ user_trays[0][0] }}? (Admin Action)')">
+                                    Delete Tray
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <!-- Multiple trays - show selection -->
+                    <div style="margin-top:1rem;">
+                        <h4>{% if is_admin %}All Trays:{% else %}Your Trays:{% endif %}</h4>
+                        {% for tray in user_trays %}
+                        <div style="margin:0.5rem 0; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                            <strong>Tray {{ tray[0] }}</strong>: {{ tray[1] }} 
+                            {% if tray[3] %}(User: {{ tray[3] }}){% endif %}
+                            ({{ tray[2] }}/30 dispenses)
+                            <div style="margin-top:0.5rem;">
+                                <form method="POST" action="{{ url_for('reset_tray') }}" style="display:inline;">
+                                    <input type="hidden" name="tray_number" value="{{ tray[0] }}">
+                                    <button type="submit" class="btn red" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Are you sure you want to reset Tray {{ tray[0] }}?')">
+                                        Reset Tray
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('reset_dispense_count') }}" style="display:inline;">
+                                    <input type="hidden" name="tray_number" value="{{ tray[0] }}">
+                                    <button type="submit" class="btn orange" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Reset dispense count for Tray {{ tray[0] }}?')">
+                                        Reset Count
+                                    </button>
+                                </form>
+                                {% if is_admin %}
+                                <form method="POST" action="{{ url_for('admin_delete_tray') }}" style="display:inline;">
+                                    <input type="hidden" name="tray_number" value="{{ tray[0] }}">
+                                    <button type="submit" class="btn red" style="padding:0.3rem 0.7rem; font-size:0.9rem;" onclick="return confirm('Are you sure you want to delete Tray {{ tray[0] }}? (Admin Action)')">
+                                        Delete Tray
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p style="margin-top:1rem; color:#666;">No trays configured yet.</p>
+            {% endif %}
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <a href="{{ url_for('dashboard') }}" class="btn blue">Back to Dashboard</a>
+                {% if is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn green">Admin Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

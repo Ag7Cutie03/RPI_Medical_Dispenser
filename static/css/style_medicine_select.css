@@ -1,0 +1,218 @@
+body {
+    background: linear-gradient(120deg, #e3f2fd 0%, #90caf9 100%);
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-box, .dashboard-box {
+    background: #fff;
+    padding: 2.5rem 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(25, 118, 210, 0.10);
+    min-width: 320px;
+    max-width: 400px;
+    width: 100%;
+    margin: 1rem;
+}
+
+h2 {
+    margin-top: 0;
+    color: #1976d2;
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #1976d2;
+    font-weight: 500;
+}
+
+.input-group input, .input-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border 0.2s;
+    background: #e3f2fd;
+    color: #0d47a1;
+}
+
+.input-group input:focus, .input-group select:focus {
+    border-color: #1976d2;
+    outline: none;
+}
+
+.btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #2196f3;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.5rem;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+/* Ensure anchor tags with btn class don't look like links */
+a.btn {
+    text-decoration: none;
+    color: #fff;
+}
+
+a.btn:hover {
+    text-decoration: none;
+    color: #fff;
+}
+
+a.btn:visited {
+    color: #fff;
+}
+
+a.btn:active {
+    color: #fff;
+}
+
+.btn.blue {
+    background: #1976d2;
+}
+
+.btn:hover, .btn.blue:hover {
+    background: #1565c0;
+}
+
+.btn.logout {
+    background: #b71c1c;
+    margin-top: 2rem;
+}
+
+.btn.logout:hover {
+    background: #c62828;
+}
+
+.btn.green {
+    background: #4caf50;
+}
+
+.btn.green:hover {
+    background: #388e3c;
+}
+
+.btn.danger {
+    background: #f44336;
+}
+
+.btn.danger:hover {
+    background: #d32f2f;
+}
+
+.btn.small {
+    width: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    margin: 0.25rem;
+}
+
+.switch-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #1976d2;
+}
+
+.switch-link a {
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.switch-link a:hover {
+    text-decoration: underline;
+}
+
+.flashes {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.flashes li {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.flashes .success {
+    background: #e3fcec;
+    color: #1976d2;
+}
+
+.flashes .danger {
+    background: #ffebee;
+    color: #b71c1c;
+}
+
+.tray-info {
+    background: #e3f2fd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.04);
+}
+
+.medicine-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    background: #e3f2fd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.04);
+}
+.medicine-table th, .medicine-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #bbdefb;
+    color: #0d47a1;
+}
+.medicine-table th {
+    background: #1976d2;
+    color: #fff;
+    font-weight: 600;
+}
+.medicine-table tr:last-child td {
+    border-bottom: none;
+}
+.medicine-table tr:hover {
+    background: #bbdefb;
+}
+
+@media (max-width: 600px) {
+    .form-box, .dashboard-box {
+        min-width: 90vw;
+        padding: 1.5rem 0.5rem;
+    }
+} 
