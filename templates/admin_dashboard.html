@@ -179,7 +179,9 @@
                                 <th>Username</th>
                                 <th>Registration Date</th>
                                 <th>Active Trays</th>
-                                <th>Actions</th>
+                                <th>Action</th>
+                                <th>Reset Password</th>
+                                <th>Change Password</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,11 +190,14 @@
                                 <td>{{ user.username }}</td>
                                 <td>{{ user.registration_date }}</td>
                                 <td>{{ user.active_trays }}</td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-danger small" onclick="deleteUser('{{ user.username }}')">Delete</button>
-                                        <button class="btn btn-blue small" onclick="resetUserPassword('{{ user.username }}')">Reset Password</button>
-                                    </div>
+                                <td style="text-align:center;">
+                                    <button class="btn btn-danger small" onclick="deleteUser('{{ user.username }}')">Delete</button>
+                                </td>
+                                <td style="text-align:center;">
+                                    <button class="btn btn-blue small" onclick="resetUserPassword('{{ user.username }}')">Reset Password</button>
+                                </td>
+                                <td style="text-align:center;">
+                                    <button class="btn btn-success small" onclick="changeUserPassword('{{ user.username }}')">Change Password</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -408,6 +413,22 @@
                 }).then(response => {
                     if (response.ok) {
                         alert('Password reset successfully for ' + username);
+                    }
+                });
+            }
+        }
+
+        function changeUserPassword(username) {
+            if (confirm('Are you sure you want to change the password for ' + username + '?')) {
+                fetch('{{ url_for("admin_change_password") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=' + encodeURIComponent(username)
+                }).then(response => {
+                    if (response.ok) {
+                        alert('Password changed successfully for ' + username);
                     }
                 });
             }
