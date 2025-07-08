@@ -1260,7 +1260,12 @@ def test_audio_system():
             'tts_available': TTS_AVAILABLE
         }
 
-
+@app.route('/admin_change_password', methods=['POST'])
+def admin_change_password():
+    username = request.form.get('username')
+    # TODO: Implement actual change password logic (e.g., show modal, set new password)
+    print(f"Change password requested for user: {username}")
+    return '', 200
 
 if __name__ == '__main__':
     print("Starting Medical Dispenser with 3.5\" display support...")
