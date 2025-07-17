@@ -669,51 +669,58 @@ def get_tray():
             conn.close()
             count = 0  # Reset count after fetching new data
 
+            # Collect trays due for dispensing
+            trays_due = []
+            now = datetime.now()
             for row in results:
                 try:
                     # Check if dispense_time exists and is a string
                     if row[6] is None or not isinstance(row[6], str):
                         continue
-                    
+                    # Convert row[6] (dispense_time) to datetime
+                    row_time = datetime.strptime(row[6], "%Y-%m-%dT%H:%M")
+                    if row_time < now:
+                        trays_due.append(row)
+                except Exception as e:
+                    print(f"Error processing row for due check: {row}, Error: {e}")
+
+            # Sort trays by tray_number (row[3])
+            trays_due.sort(key=lambda r: r[3])
+
+            # Dispense trays one at a time, in order
+            for row in trays_due:
+                try:
                     # Extract interval from row[7] (interval column)
                     interval_str = row[7] if row[7] else "1"
                     interv = int(re.search(r'\d+', interval_str).group()) if re.search(r'\d+', interval_str) else 1
-                    
-                    now = datetime.now()
-                    formatted_datetime = now.strftime("%Y-%m-%dT%H:%M")
-
-                    # Convert row[6] (dispense_time) to datetime
                     row_time = datetime.strptime(row[6], "%Y-%m-%dT%H:%M")
+                    updated_time = row_time + timedelta(hours=interv)
+                    updated_time_str = updated_time.strftime("%Y-%m-%dT%H:%M")
 
-                    print(f"Checking row: ID {row[0]}, Current dispense_time: {row_time}, Now: {now}")
+                    print(f"Updating dispense_time for ID {row[0]} to {updated_time_str}")
 
-                    if row_time < now:  # If dispense_time is in the past
-                        updated_time = row_time + timedelta(hours=interv)  # Add interval
-                        updated_time_str = updated_time.strftime("%Y-%m-%dT%H:%M")
+                    # Update database
+                    conn = sqlite3.connect(DATABASE)
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        UPDATE tray_settings
+                        SET dispense_time = ?
+                        WHERE id = ?
+                    ''', (updated_time_str, row[0]))
+                    conn.commit()
 
-                        print(f"Updating dispense_time for ID {row[0]} to {updated_time_str}")
-
-                        # Update database
-                        conn = sqlite3.connect(DATABASE)
-                        cursor = conn.cursor()
-                        cursor.execute('''
-                            UPDATE tray_settings
-                            SET dispense_time = ?
-                            WHERE id = ?
-                        ''', (updated_time_str, row[0]))
-                        conn.commit()
-
-                        # Check if update was successful and dispense medicine
-                        tray_number = row[3]  # tray_number is at index 3
-                        description = row[4]  # description is at index 4
-                        
-                        if tray_number == 1:
-                            move_tray_1(description, row[0])
-                        elif tray_number == 2:
-                            move_tray_2(description, row[0])
-                        conn.close()
+                    # Dispense in order
+                    tray_number = row[3]  # tray_number is at index 3
+                    description = row[4]  # description is at index 4
+                    if tray_number == 1:
+                        move_tray_1(description, row[0])
+                    elif tray_number == 2:
+                        move_tray_2(description, row[0])
+                    # Add more elifs for more trays if needed
+                    conn.close()
                 except Exception as e:
                     print(f"Error processing row: {row}, Error: {e}")
+                # Wait a short time before next tray to ensure sequential operation
                 time.sleep(5)
 
         count += 1
