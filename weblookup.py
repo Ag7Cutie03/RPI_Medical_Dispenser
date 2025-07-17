@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import re
 import time
 import os
-import openai
 import google.generativeai as genai
 
 # Simple in-memory cache for medicine instructions
@@ -180,7 +179,7 @@ def fetch_intake_instructions(medicine_name):
         f"Now give me instructions for **{medicine_name}** with the correct values."
     )
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('models/gemini-1.0-pro-latest')
         response = model.generate_content(prompt)
         answer = response.text.strip()
         if answer:
