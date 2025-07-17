@@ -39,3 +39,5 @@ Pillow>=10.0.0
 # =============================================================================
 # datetime, timedelta, os, re, time, csv, sqlite3, threading
 # urllib.parse, sys, signal, tempfile, subprocess, hashlib 
+openai
+requests 

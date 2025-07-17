@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import os
+import openai
 
 # Simple in-memory cache for medicine instructions
 MEDICINE_CACHE = {}
@@ -155,8 +157,7 @@ def get_web_instructions(medicine_name):
 
 def fetch_intake_instructions(medicine_name):
     """
-    Fetch medicine instructions from MIMS Philippines website first, then fallback to other web sources.
-    Returns instruction string or fallback message if no web sources have information.
+    Fetch medicine instructions using OpenAI ChatGPT API. Returns instruction string or fallback message if no information is found.
     """
     # Check cache first
     current_time = time.time()
@@ -165,26 +166,30 @@ def fetch_intake_instructions(medicine_name):
         if current_time - cache_time < CACHE_DURATION:
             return cached_instructions
     
-    # First, try to get instructions from MIMS Philippines
-    mims_instructions = get_mims_instructions(medicine_name)
-    if mims_instructions:
-        # Cache the result
-        MEDICINE_CACHE[medicine_name] = (current_time, mims_instructions)
-        return mims_instructions
-    
-    # If MIMS doesn't have it, try other web sources
-    web_instructions = get_web_instructions(medicine_name)
-    if web_instructions:
-        # Cache the result
-        MEDICINE_CACHE[medicine_name] = (current_time, web_instructions)
-        return web_instructions
-    
-    # If no web sources have information, return a generic message
-    fallback_message = f"Instructions for {medicine_name}: No specific dosage information found online. Please consult your doctor or pharmacist for proper dosage instructions. Always follow your healthcare provider's recommendations."
-    
-    # Cache the fallback message too
-    MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
-    return fallback_message
+    # Use OpenAI ChatGPT API for instructions
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        fallback_message = f"Instructions for {medicine_name}: No API key found. Please set the OPENAI_API_KEY environment variable."
+        MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
+        return fallback_message
+    openai.api_key = api_key
+    prompt = f"What are the administration and dosage instructions for {medicine_name}? Please provide clear, concise instructions suitable for a patient."
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=256,
+            temperature=0.2
+        )
+        answer = response.choices[0].message.content.strip()
+        if answer:
+            MEDICINE_CACHE[medicine_name] = (current_time, answer)
+            return answer
+    except Exception as e:
+        print(f"OpenAI API error: {e}")
+        fallback_message = f"Instructions for {medicine_name}: No specific dosage information found online. Please consult your doctor or pharmacist for proper dosage instructions. Always follow your healthcare provider's recommendations."
+        MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
+        return fallback_message
 
 def test_mims(medicine_name):
     """Test route to manually test MIMS scraping for a specific medicine"""

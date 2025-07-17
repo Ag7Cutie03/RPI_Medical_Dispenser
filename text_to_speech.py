@@ -2,6 +2,8 @@ import os
 import re
 import subprocess
 import tempfile
+import openai
+import requests
 
 # Global variables for TTS
 TTS_AVAILABLE = False
@@ -72,49 +74,85 @@ def initialize_tts():
         TTS_AVAILABLE = False
         return False
 
+def generate_doctor_instructions(medicine_name):
+    """Generate clear, simple medicine instructions using OpenAI Chat API and a doctor-style prompt."""
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        return f"No API key found. Please set the OPENAI_API_KEY environment variable."
+    import openai
+    openai.api_key = api_key
+    prompt = (
+        "You are a doctor talking to me as a patient. I want clear, simple instructions in layman's terms with the following format:\n"
+        "- Take 1 [tablet/capsule] by mouth every [X] hours\n"
+        "- Do not take more than [Y] [tablets/capsules] in 24 hours (this prevents any overdose) ([source1], [source2])\n"
+        "- If you miss a dose, don’t double up—just take the next dose at the regular time\n"
+        "- You can take it with or without food\n\n"
+        f"Now give me instructions for **{medicine_name}** with the correct values."
+    )
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=256,
+            temperature=0.2
+        )
+        answer = response.choices[0].message.content.strip()
+        return answer
+    except Exception as e:
+        return f"Error generating instructions: {e}"
+
 def speak(text):
-    """Speak text using pico2wave if available, otherwise just print it"""
-    global TTS_AVAILABLE
-    
-    if TTS_AVAILABLE:
-        try:
-            # Clean and format the text for better speech
-            cleaned_text = clean_text_for_speech(text)
-            print(f"🔊 Speaking: {cleaned_text}")
-            
-            # Create a temporary WAV file
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_wav:
-                temp_wav_path = temp_wav.name
-            
+    """Speak text using OpenAI TTS API if available, otherwise just print it. If text is a medicine name or request for instructions, generate formatted instructions first."""
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        print(f"🔇 Speech (no API key): {text}")
+        return
+    # Heuristic: if text is short or looks like a medicine name, generate instructions
+    if (text.lower().startswith('instructions for ') and len(text.split()) <= 6) or (len(text.split()) <= 4 and text.isalpha()):
+        # Extract medicine name
+        if text.lower().startswith('instructions for '):
+            medicine_name = text[len('instructions for '):].strip()
+        else:
+            medicine_name = text.strip()
+        text = generate_doctor_instructions(medicine_name)
+    try:
+        # Call OpenAI TTS API
+        response = requests.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+            },
+            json={
+                "model": "tts-1",
+                "input": text,
+                "voice": "alloy"
+            },
+            stream=True
+        )
+        if response.status_code != 200:
+            print(f"🔇 Speech (API error {response.status_code}): {text}")
+            return
+        # Save audio to temp file
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_audio:
+            for chunk in response.iter_content(chunk_size=4096):
+                temp_audio.write(chunk)
+            temp_audio_path = temp_audio.name
+        # Play audio (try aplay, ffplay, or mpg123)
+        played = False
+        for player in [["aplay", temp_audio_path], ["ffplay", "-nodisp", "-autoexit", temp_audio_path], ["mpg123", temp_audio_path]]:
             try:
-                # Use pico2wave to convert text to speech and save as WAV
-                # -w specifies output WAV file
-                # -l specifies language (en-US for US English)
-                subprocess.run([
-                    'pico2wave', 
-                    '-w', temp_wav_path, 
-                    '-l', 'en-US',
-                    cleaned_text
-                ], check=True, capture_output=True)
-                
-                # Play the generated WAV file using aplay
-                subprocess.run(['aplay', temp_wav_path], check=True)
-                print("✓ Speech completed")
-                
-            finally:
-                # Clean up temporary file
-                if os.path.exists(temp_wav_path):
-                    os.unlink(temp_wav_path)
-                    
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Speech error: {e}")
-            print(f"Message: {text}")
-        except Exception as e:
-            print(f"❌ Speech error: {e}")
-            print(f"Message: {text}")
-    else:
-        print(f"🔇 Speech (disabled): {text}")
-        print(f"TTS_AVAILABLE: {TTS_AVAILABLE}")
+                subprocess.run(player, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                played = True
+                break
+            except Exception:
+                continue
+        if not played:
+            print(f"🔇 Could not play audio. File at: {temp_audio_path}")
+        else:
+            os.unlink(temp_audio_path)
+    except Exception as e:
+        print(f"🔇 Speech error: {e}")
+        print(f"Message: {text}")
 
 def test_speech():
     """Test speech functionality"""
