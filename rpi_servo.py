@@ -3,8 +3,8 @@ import time
 
 class ServoController:
     def __init__(self):
-        self.tray1_pin = 32  # GPIO 32 for Tray 1 (SG90)
-        self.tray2_pin = 33  # GPIO 33 for Tray 2
+        self.tray1_pin = 29  # GPIO 32 for Tray 1 (SG90)
+        self.tray2_pin = 31  # GPIO 33 for Tray 2
         self.frequency = 50  # 50Hz for standard servos
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(self.tray1_pin, GPIO.OUT)
