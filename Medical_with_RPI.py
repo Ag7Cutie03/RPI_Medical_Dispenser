@@ -18,6 +18,8 @@ except Exception as e:
     TTS_AVAILABLE = False
     engine = None
 
+from weblookup import fetch_intake_instructions
+
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')
 
@@ -222,7 +224,7 @@ default_system_settings = {
 
 # Import medicine web lookup
 try:
-    from weblookup import fetch_intake_instructions, test_mims, test_all_sources
+    from weblookup import test_mims, test_all_sources
     print("✓ Medicine weblookup imported successfully")
 except Exception as e:
     print(f"Medicine weblookup import failed: {e}")
