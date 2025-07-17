@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import openai
 import requests
+import time
 
 # Global variables for TTS
 TTS_AVAILABLE = False
@@ -101,8 +102,21 @@ def generate_doctor_instructions(medicine_name):
     except Exception as e:
         return f"Error generating instructions: {e}"
 
+def set_max_volume():
+    """Set system volume to maximum and unmute audio jack output."""
+    try:
+        subprocess.run(['amixer', 'set', 'Master', '100%'], check=True)
+        subprocess.run(['amixer', 'set', 'Master', 'unmute'], check=True)
+        subprocess.run(['amixer', 'set', 'PCM', 'unmute'], check=True)
+        # Force output to audio jack (if on Raspberry Pi)
+        subprocess.run(['amixer', 'cset', 'numid=3', '1'], check=True)
+    except Exception as e:
+        print(f"Warning: Could not set max volume or force audio jack: {e}")
+
 def speak(text):
     """Speak text using OpenAI TTS API if available, otherwise just print it. If text is a medicine name or request for instructions, generate formatted instructions first."""
+    set_max_volume()
+    time.sleep(5)  # Wait 5 seconds before dictating the instruction
     api_key = os.getenv('OPENAI_API_KEY')
     if not api_key:
         print(f"🔇 Speech (no API key): {text}")

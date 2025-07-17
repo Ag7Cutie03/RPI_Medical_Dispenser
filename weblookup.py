@@ -4,10 +4,14 @@ import re
 import time
 import os
 import openai
+import google.generativeai as genai
 
 # Simple in-memory cache for medicine instructions
 MEDICINE_CACHE = {}
 CACHE_DURATION = 3600  # Cache for 1 hour
+
+GEMINI_API_KEY = "AIzaSyDUElsMrbJ8ye3L5YFPOB2GNC9FC-yRlLA"
+genai.configure(api_key=GEMINI_API_KEY)
 
 def get_mims_instructions(medicine_name):
     """
@@ -157,36 +161,33 @@ def get_web_instructions(medicine_name):
 
 def fetch_intake_instructions(medicine_name):
     """
-    Fetch medicine instructions using OpenAI ChatGPT API. Returns instruction string or fallback message if no information is found.
+    Fetch medicine instructions using Google Gemini API. Returns instruction string or fallback message if no information is found.
+    Waits 5 seconds before searching to allow servo to finish dispensing.
     """
+    time.sleep(5)  # Wait for servo to finish dispensing
     # Check cache first
     current_time = time.time()
     if medicine_name in MEDICINE_CACHE:
         cache_time, cached_instructions = MEDICINE_CACHE[medicine_name]
         if current_time - cache_time < CACHE_DURATION:
             return cached_instructions
-    
-    # Use OpenAI ChatGPT API for instructions
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        fallback_message = f"Instructions for {medicine_name}: No API key found. Please set the OPENAI_API_KEY environment variable."
-        MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
-        return fallback_message
-    openai.api_key = api_key
-    prompt = f"What are the administration and dosage instructions for {medicine_name}? Please provide clear, concise instructions suitable for a patient."
+    prompt = (
+        "You are a doctor talking to me as a patient. I want clear, simple instructions in layman's terms with the following format:\n"
+        "- Take 1 [tablet/capsule] by mouth every [X] hours\n"
+        "- Do not take more than [Y] [tablets/capsules] in 24 hours (this prevents any overdose) ([source1], [source2])\n"
+        "- If you miss a dose, don’t double up—just take the next dose at the regular time\n"
+        "- You can take it with or without food\n\n"
+        f"Now give me instructions for **{medicine_name}** with the correct values."
+    )
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=256,
-            temperature=0.2
-        )
-        answer = response.choices[0].message.content.strip()
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content(prompt)
+        answer = response.text.strip()
         if answer:
             MEDICINE_CACHE[medicine_name] = (current_time, answer)
             return answer
     except Exception as e:
-        print(f"OpenAI API error: {e}")
+        print(f"Gemini API error: {e}")
         fallback_message = f"Instructions for {medicine_name}: No specific dosage information found online. Please consult your doctor or pharmacist for proper dosage instructions. Always follow your healthcare provider's recommendations."
         MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
         return fallback_message

@@ -41,3 +41,4 @@ Pillow>=10.0.0
 # urllib.parse, sys, signal, tempfile, subprocess, hashlib 
 openai
 requests 
+google-generativeai 
