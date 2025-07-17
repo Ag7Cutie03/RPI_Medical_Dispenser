@@ -179,7 +179,7 @@ def fetch_intake_instructions(medicine_name):
         f"Now give me instructions for **{medicine_name}** with the correct values."
     )
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
         response = model.generate_content(prompt)
         answer = response.text.strip()
         if answer:
