@@ -179,7 +179,7 @@ def fetch_intake_instructions(medicine_name):
         f"Now give me instructions for **{medicine_name}** with the correct values."
     )
     try:
-        model = genai.GenerativeModel('models/gemini-1.0-pro-latest')
+        model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         answer = response.text.strip()
         if answer:
@@ -187,6 +187,12 @@ def fetch_intake_instructions(medicine_name):
             return answer
     except Exception as e:
         print(f"Gemini API error: {e}")
+        print("Available models:")
+        try:
+            for m in genai.list_models():
+                print(m)
+        except Exception as e2:
+            print(f"Error listing models: {e2}")
         fallback_message = f"Instructions for {medicine_name}: No specific dosage information found online. Please consult your doctor or pharmacist for proper dosage instructions. Always follow your healthcare provider's recommendations."
         MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
         return fallback_message
