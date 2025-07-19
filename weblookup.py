@@ -11,8 +11,14 @@ CACHE_DURATION = 3600  # Cache for 1 hour
 
 def get_web_instructions(medicine_name):
     """
-    Scrape only the 'Indications/Uses' and 'Dosage and Administration' sections from the MIMS Philippines drug info page for the given medicine.
-    Returns a structured summary as a string.
+    Scrape only the 'Indications/Uses', 'Dosage/Direction for Use', and 'Administration' sections from the MIMS Philippines drug info page for the given medicine.
+    Returns a structured summary as a string, formatted as:
+    Indications/Uses
+    > content
+    Dosage/Direction for Use
+    > content
+    Administration
+    > content
     """
     start_time = time.perf_counter()
     try:
@@ -38,8 +44,8 @@ def get_web_instructions(medicine_name):
                 title = heading.inner_text().strip().lower()
                 if not title or len(title) > 100:
                     continue
-                # Look for relevant section titles
-                if ('indication' in title or 'use' in title or 'dosage' in title or 'administration' in title):
+                # Only match exact section titles (case-insensitive)
+                if title in ['indications/uses', 'dosage/direction for use', 'administration']:
                     sib = heading.evaluate_handle('el => el.nextElementSibling')
                     content = ""
                     if sib:
@@ -47,17 +53,18 @@ def get_web_instructions(medicine_name):
                     if content and len(content) > 20:
                         sections[title] = content
             browser.close()
-            # Format output
-            if sections:
-                summary = []
-                for title, content in sections.items():
-                    summary.append(f"**{title.title()}**\n{content}\n")
-                elapsed = time.perf_counter() - start_time
+            # Format output in the requested style
+            output = []
+            for key in ['indications/uses', 'dosage/direction for use', 'administration']:
+                if key in sections:
+                    output.append(f"{key.title().replace('/', '/')}\n> {sections[key]}")
+            elapsed = time.perf_counter() - start_time
+            if output:
+                result = '\n'.join(output)
                 print(f"[BENCHMARK] Web scraping for '{medicine_name}' took {elapsed:.2f} seconds.")
-                print(f"[WEBSCRAPED INSTRUCTIONS] {''.join(summary)}")
-                return "\n".join(summary)
+                print(f"[WEBSCRAPED INSTRUCTIONS] {result}")
+                return result
             else:
-                elapsed = time.perf_counter() - start_time
                 print(f"[BENCHMARK] Web scraping for '{medicine_name}' took {elapsed:.2f} seconds. No relevant sections found.")
                 return "No relevant sections found."
     except Exception as e:
