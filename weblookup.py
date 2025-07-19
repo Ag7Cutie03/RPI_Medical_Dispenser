@@ -16,7 +16,7 @@ def get_web_instructions(medicine_name):
     """
     start_time = time.perf_counter()
     try:
-        # Extract only the brand name (first word, before any dosage or extra info)
+        # Use only the brand name (first word) for the MIMS URL
         brand_name = medicine_name.split()[0].strip().lower()
         url_name = brand_name.replace(' ', '-').replace('/', '-')
         url = f"https://www.mims.com/philippines/drug/info/{url_name}"
