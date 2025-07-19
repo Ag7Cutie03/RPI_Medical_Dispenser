@@ -20,7 +20,7 @@ def get_directions_from_drugs_com(medicine_name, max_retries=3, retry_delay=2):
     attempt = 0
     while attempt < max_retries:
         try:
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=60)  # Increased timeout to 60 seconds (1 minute)
             response.raise_for_status()
             # Try lxml parser for speed and robustness, fallback to html.parser
             try:

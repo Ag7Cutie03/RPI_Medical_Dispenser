@@ -623,6 +623,16 @@ def move_tray_1(medicine_name, tray_id):
         
         print(f"Medicine dispensed from Tray 1. {medicine_name}.")
         
+        # Get directions and speak them after dispensing
+        try:
+            print("Fetching directions and speaking them...")
+            # Extract just the brand name for weblookup (remove dosage info)
+            brand_name = medicine_name.split()[0]  # Take first word as brand name
+            directions = get_directions_and_speak(brand_name)
+            print(f"Directions for {brand_name}: {directions}")
+        except Exception as e:
+            print(f"Error getting directions: {e}")
+        
         return True
     conn.close()
     return False
@@ -651,6 +661,16 @@ def move_tray_2(medicine_name, tray_id):
             servo_controller.dispense_from_tray_2(medicine_name)
         
         print(f"Medicine dispensed from Tray 2. {medicine_name}.")
+        
+        # Get directions and speak them after dispensing
+        try:
+            print("Fetching directions and speaking them...")
+            # Extract just the brand name for weblookup (remove dosage info)
+            brand_name = medicine_name.split()[0]  # Take first word as brand name
+            directions = get_directions_and_speak(brand_name)
+            print(f"Directions for {brand_name}: {directions}")
+        except Exception as e:
+            print(f"Error getting directions: {e}")
         
         return True
     conn.close()
@@ -1200,6 +1220,30 @@ def emergency_reset_admin():
             flash(f'Error resetting admin password: {e}', 'danger')
     
     return render_template('emergency_reset.html')
+
+@app.route('/test_weblookup/<medicine_name>')
+def test_weblookup(medicine_name):
+    """Test route to manually test weblookup and text-to-speech for a medicine"""
+    if 'user_id' not in session:
+        flash('Please log in to access this page.', 'danger')
+        return redirect(url_for('login'))
+    
+    try:
+        print(f"Testing weblookup for: {medicine_name}")
+        directions = get_directions_and_speak(medicine_name)
+        return f"""
+        <h2>Test Results for {medicine_name}</h2>
+        <p><strong>Directions:</strong></p>
+        <pre>{directions}</pre>
+        <p><em>Directions have been spoken aloud via text-to-speech.</em></p>
+        <a href="/dashboard">Back to Dashboard</a>
+        """
+    except Exception as e:
+        return f"""
+        <h2>Error Testing Weblookup</h2>
+        <p>Error: {e}</p>
+        <a href="/dashboard">Back to Dashboard</a>
+        """
 
 @app.route('/debug_password/<username>')
 def debug_password(username):
