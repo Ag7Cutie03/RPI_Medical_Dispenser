@@ -16,9 +16,11 @@ def get_web_instructions(medicine_name):
     """
     start_time = time.perf_counter()
     try:
-        clean_name = re.sub(r'\d+mg|\d+ml|\d+mg/\d+ml', '', medicine_name).strip().lower()
-        url_name = clean_name.replace(' ', '-').replace('/', '-')
+        # Extract only the brand name (first word, before any dosage or extra info)
+        brand_name = medicine_name.split()[0].strip().lower()
+        url_name = brand_name.replace(' ', '-').replace('/', '-')
         url = f"https://www.mims.com/philippines/drug/info/{url_name}"
+        print(f"[DEBUG] MIMS URL: {url}")
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
