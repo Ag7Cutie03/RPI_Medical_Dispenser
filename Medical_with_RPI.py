@@ -9,17 +9,6 @@ import spidev
 # Import RPi servo controller
 from rpi_servo import get_servo_controller, cleanup_servo_controller
 
-# Import TTS manager
-try:
-    from text_to_speech import speak, TTS_AVAILABLE, engine, test_speech, test_audio_system
-    print("✓ TTS manager imported successfully")
-except Exception as e:
-    print(f"TTS manager import failed: {e}")
-    TTS_AVAILABLE = False
-    engine = None
-
-from weblookup import fetch_intake_instructions
-
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')
 
@@ -538,6 +527,9 @@ def dispense():
         username = "Guest"
 
     medicine_description = request.form.get('description', "No Medicine Selected")
+    # Remove dosage strength if present (optional, for extra safety)
+    # For example, if description is "Paracetamol 500mg", keep only "Paracetamol"
+    medicine_description = medicine_description.split(' ')[0]
     tray_number = request.form.get('tray_number', None)
     # Log dispense event
     conn = sqlite3.connect(DATABASE)
@@ -610,7 +602,7 @@ def move_tray_1(medicine_name, tray_id):
     if result:
         dispense_count = result[0]
         if dispense_count >= 30:
-            speak(f"All medicine has been dispensed from Tray 1. {medicine_name}. Please refill the tray.")
+            print(f"All medicine has been dispensed from Tray 1. {medicine_name}. Please refill the tray.")
             conn.close()
             return False
         
@@ -623,8 +615,7 @@ def move_tray_1(medicine_name, tray_id):
         if servo_controller:
             servo_controller.dispense_from_tray_1(medicine_name)
         
-        instructions = fetch_intake_instructions(medicine_name)
-        speak(f"Medicine dispensed from Tray 1. {medicine_name}. Instructions: {instructions}")
+        print(f"Medicine dispensed from Tray 1. {medicine_name}.")
         
         return True
     conn.close()
@@ -640,7 +631,7 @@ def move_tray_2(medicine_name, tray_id):
     if result:
         dispense_count = result[0]
         if dispense_count >= 30:
-            speak(f"All medicine has been dispensed from Tray 2. {medicine_name}. Please refill the tray.")
+            print(f"All medicine has been dispensed from Tray 2. {medicine_name}. Please refill the tray.")
             conn.close()
             return False
         
@@ -653,8 +644,7 @@ def move_tray_2(medicine_name, tray_id):
         if servo_controller:
             servo_controller.dispense_from_tray_2(medicine_name)
         
-        instructions = fetch_intake_instructions(medicine_name)
-        speak(f"Medicine dispensed from Tray 2. {medicine_name}. Instructions: {instructions}")
+        print(f"Medicine dispensed from Tray 2. {medicine_name}.")
         
         return True
     conn.close()
@@ -694,7 +684,8 @@ def get_tray():
                 try:
                     # Extract interval from row[7] (interval column)
                     interval_str = row[7] if row[7] else "1"
-                    interv = int(re.search(r'\d+', interval_str).group()) if re.search(r'\d+', interval_str) else 1
+                    interval_match = re.search(r'\d+', interval_str)
+                    interv = int(interval_match.group()) if interval_match else 1
                     row_time = datetime.strptime(row[6], "%Y-%m-%dT%H:%M")
                     updated_time = row_time + timedelta(hours=interv)
                     updated_time_str = updated_time.strftime("%Y-%m-%dT%H:%M")
@@ -728,8 +719,7 @@ def get_tray():
         count += 1
         time.sleep(2)
 
-thread = threading.Thread(target=get_tray, daemon=True)
-thread.start()
+# The thread for get_tray is removed as it no longer uses speak or fetch_intake_instructions.
 
 
 @app.route('/reset_tray', methods=['POST'])
@@ -1191,93 +1181,10 @@ def debug_password(username):
     except Exception as e:
         return {'error': str(e)}
 
-@app.route('/test_speech')
-def test_speech():
-    """Test route to enable and test speech functionality"""
-    try:
-        from text_to_speech import test_speech as tts_test
-        return tts_test()
-    except Exception as e:
-        return {
-            'status': 'error', 
-            'message': f'Speech test failed: {str(e)}', 
-            'tts_available': TTS_AVAILABLE,
-            'engine_status': engine is not None
-        }
-
-@app.route('/test_mims/<medicine_name>')
-def test_mims(medicine_name):
-    """Test route to manually test MIMS scraping for a specific medicine"""
-    try:
-        from weblookup import test_mims as mims_test
-        return mims_test(medicine_name)
-    except Exception as e:
-        return {
-            'status': 'error',
-            'medicine': medicine_name,
-            'error': str(e)
-        }
-
-@app.route('/test_all_sources/<medicine_name>')
-def test_all_sources(medicine_name):
-    """Test route to check all web sources for a specific medicine"""
-    try:
-        from weblookup import test_all_sources as sources_test
-        return sources_test(medicine_name)
-    except Exception as e:
-        return {
-            'status': 'error',
-            'medicine': medicine_name,
-            'error': str(e)
-        }
-
-@app.route('/test_speech_with_medicine/<medicine_name>')
-def test_speech_with_medicine(medicine_name):
-    """Test route to fetch medicine instructions and speak them"""
-    try:
-        # Fetch instructions
-        instructions = fetch_intake_instructions(medicine_name)
-        
-        # Speak the instructions
-        speak(f"Medicine dispensed: {medicine_name}. {instructions}")
-        
-        return {
-            'status': 'success',
-            'medicine': medicine_name,
-            'instructions': instructions,
-            'tts_available': TTS_AVAILABLE,
-            'message': 'Instructions spoken successfully'
-        }
-    except Exception as e:
-        return {
-            'status': 'error',
-            'medicine': medicine_name,
-            'error': str(e),
-            'tts_available': TTS_AVAILABLE
-        }
-
-@app.route('/test_audio_system')
-def test_audio_system():
-    """Test and configure audio system"""
-    try:
-        from text_to_speech import test_audio_system as audio_test
-        return audio_test()
-    except Exception as e:
-        return {
-            'status': 'error',
-            'error': str(e),
-            'tts_available': TTS_AVAILABLE
-        }
-
-@app.route('/admin_change_password', methods=['POST'])
-def admin_change_password():
-    username = request.form.get('username')
-    # TODO: Implement actual change password logic (e.g., show modal, set new password)
-    print(f"Change password requested for user: {username}")
-    return '', 200
+# The test_speech, test_mims, test_all_sources, test_speech_with_medicine, test_audio_system, admin_change_password, and debug_password routes are removed as they are no longer used.
 
 if __name__ == '__main__':
-    print("Starting Medical Dispenser with 3.5\" display support...")
+    print("Starting Medical Dispenser...")
     print("Web interface available at: http://localhost:5000")
     
     # Register signal handlers for graceful shutdown
@@ -1291,15 +1198,10 @@ if __name__ == '__main__':
     flask_thread.start()
     
     # Wait a few seconds for the server to start
-    import subprocess
     import time
     time.sleep(5)
     
-    # Open Chromium in kiosk mode to the admin dashboard
-    try:
-        subprocess.Popen(['chromium-browser', '--kiosk', 'http://localhost:5000/admin_dashboard'])
-    except FileNotFoundError:
-        print("Chromium browser not found. Please install it with 'sudo apt-get install chromium-browser'.")
+    # The code to launch Chromium in kiosk mode has been removed.
     
     # Keep the main thread alive for display updates
     try:

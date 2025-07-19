@@ -1,95 +1,70 @@
-import re
-import time
 import requests
 from bs4 import BeautifulSoup
+from bs4.element import Tag
+import time
+from text_to_speech import speak_text
 
-# Simple in-memory cache for medicine instructions
-MEDICINE_CACHE = {}
-CACHE_DURATION = 3600  # Cache for 1 hour
 
-def get_web_instructions(medicine_name):
+def get_directions_from_drugs_com(medicine_name, max_retries=3, retry_delay=2):
     """
-    Scrape the 'Directions' section from https://www.drugs.com/dosage/{brand_name}.html
+    Fetch the 'Directions' section from drugs.com for the given brand name.
+    Args:
+        medicine_name (str): The brand name of the medicine (e.g., 'paracetamol').
+        max_retries (int): Number of times to retry on network error.
+        retry_delay (int): Seconds to wait between retries.
     Returns:
-    Directions
-    > content
+        str: The content of the Directions section, or an error message.
     """
-    start_time = time.perf_counter()
-    try:
-        brand_name = medicine_name.split()[0].strip().lower()
-        url = f"https://www.drugs.com/dosage/{brand_name}.html"
-        print(f"[Drugs.com Dosage URL: {url}")
-        response = requests.get(url, timeout=30)
-        if response.status_code != 200:
-            print(f"[ERROR] Failed to fetch {url} (status {response.status_code})")
-            return "No relevant sections found."
-        soup = BeautifulSoup(response.text, 'html.parser')
-        # Find the 'Directions' heading
-        directions_heading = soup.find(lambda tag: tag.name in ['h2', 'h3', 'h4', 'strong', 'b'] and tag.get_text(strip=True).lower() == 'directions')
-        if not directions_heading:
-            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds. No relevant sections found.")
-            return "No relevant sections found."
-        # Collect all sibling <ul>, <ol>, <p>, or text until the next heading
-        content = []
-        for sib in directions_heading.find_next_siblings():
-            sib_name = getattr(sib, 'name', None)
-            if sib_name and sib_name.startswith('h'):
-                break
-            text = sib.get_text(strip=True)
-            if text:
-                content.append(text)
-        if content:
-            result = 'Directions\n> ' + '\n> '.join(content)
-            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds.")
-            print(f"[WEBSCRAPED INSTRUCTIONS] {result}")
-            return result
-        else:
-            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds. No relevant sections found.")
-            return "No relevant sections found."
-    except Exception as e:
-        print(f"Error fetching Drugs.com directions: {e}")
-        return "No relevant sections found."
+    url_brand = medicine_name.strip().replace(' ', '-').lower()
+    url = f"https://www.drugs.com/dosage/{url_brand}.html"
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            # Try lxml parser for speed and robustness, fallback to html.parser
+            try:
+                soup = BeautifulSoup(response.text, 'lxml')
+            except Exception:
+                soup = BeautifulSoup(response.text, 'html.parser')
+            # Find the 'Directions' section header (h2 or h3)
+            directions_header = soup.find(lambda tag: tag.name in ['h2', 'h3'] and 'directions' in tag.text.lower())
+            if not directions_header:
+                return "Directions section not found."
+            # Collect all content until the next header of the same or higher level
+            content = []
+            for sibling in directions_header.find_next_siblings():
+                if isinstance(sibling, Tag) and sibling.name and sibling.name.startswith('h'):
+                    break
+                content.append(sibling.get_text(strip=True))
+            return '\n'.join(content).strip() or "Directions content not found."
+        except requests.exceptions.RequestException as e:
+            attempt += 1
+            if attempt >= max_retries:
+                return f"Network error fetching directions: {e}"
+            time.sleep(retry_delay)
+        except Exception as e:
+            return f"Error fetching directions: {e}"
 
-def fetch_intake_instructions(medicine_name):
+
+def get_directions_and_speak(medicine_name, max_retries=3, retry_delay=2):
     """
-    Fetch medicine instructions using Drugs.com web lookup. Returns instruction string or fallback message if no information is found.
-    Waits 5 seconds before searching to allow servo to finish dispensing.
+    Fetch directions for a medicine and speak them aloud using piper-tts.
+    Args:
+        medicine_name (str): The brand name of the medicine.
+        max_retries (int): Number of times to retry on network error.
+        retry_delay (int): Seconds to wait between retries.
+    Returns:
+        str: The directions text that was spoken.
     """
-    time.sleep(5)  # Wait for servo to finish dispensing
-    start_time = time.perf_counter()
-    current_time = time.time()
-    if medicine_name in MEDICINE_CACHE:
-        cache_time, cached_instructions = MEDICINE_CACHE[medicine_name]
-        if current_time - cache_time < CACHE_DURATION:
-            print(f"[BENCHMARK] fetch_intake_instructions for '{medicine_name}' (CACHED) took {time.perf_counter() - start_time:.2f} seconds.")
-            print(f"[INSTRUCTIONS] {cached_instructions}")
-            return cached_instructions
-    # Remove dosage strength and form info before extracting brand name
-    cleaned_name = re.sub(r"(\d+\s*mg(?:/\d+\s*ml)?|\d+\s*ml|mg|ml|suspension|tablet|tab|capsule|cap|syrup|solution|\d+mg/\d+ml)", "", medicine_name, flags=re.IGNORECASE).strip()
-    brand_name = cleaned_name.split()[0].strip().lower() if cleaned_name else medicine_name.split()[0].strip().lower()
-    instructions = get_web_instructions(brand_name)
-    elapsed = time.perf_counter() - start_time
-    if instructions:
-        MEDICINE_CACHE[medicine_name] = (current_time, instructions)
-        print(f"[BENCHMARK] fetch_intake_instructions for '{medicine_name}' took {elapsed:.2f} seconds.")
-        print(f"[INSTRUCTIONS] {instructions}")
-        return instructions
-    fallback_message = f"Instructions for {medicine_name}: No specific dosage information found online. Please consult your doctor or pharmacist for proper dosage instructions. Always follow your healthcare provider's recommendations."
-    MEDICINE_CACHE[medicine_name] = (current_time, fallback_message)
-    print(f"[BENCHMARK] fetch_intake_instructions for '{medicine_name}' (FALLBACK) took {elapsed:.2f} seconds.")
-    print(f"[INSTRUCTIONS] {fallback_message}")
-    return fallback_message
+    directions = get_directions_from_drugs_com(medicine_name, max_retries, retry_delay)
+    print(f"Directions for {medicine_name}:")
+    print(directions)
+    print("\nSpeaking directions...")
+    speak_text(directions)
+    return directions
 
-def clear_cache():
-    """Clear the medicine instruction cache"""
-    global MEDICINE_CACHE
-    MEDICINE_CACHE.clear()
-    print("Medicine instruction cache cleared")
 
-def get_cache_info():
-    """Get information about the cache"""
-    return {
-        'cache_size': len(MEDICINE_CACHE),
-        'cached_medicines': list(MEDICINE_CACHE.keys()),
-        'cache_duration': CACHE_DURATION
-    } 
+if __name__ == "__main__":
+    # Test run for 'neozep' - fetch directions and speak them
+    result = get_directions_and_speak("neozep")

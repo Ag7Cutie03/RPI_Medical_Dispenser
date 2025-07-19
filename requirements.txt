@@ -10,18 +10,12 @@ Werkzeug>=2.3.0
 RPi.GPIO>=0.7.0
 spidev>=3.6
 
-# Web Scraping and HTTP Requests
-beautifulsoup4>=4.12.0
-requests>=2.31.0
-lxml>=4.9.0
-
 # Image Processing and Display
 Pillow>=10.0.0
 
 # =============================================================================
 # System Dependencies (install via apt-get)
 # =============================================================================
-# Text-to-Speech: sudo apt-get install libttspico-utils
 # Audio tools: sudo apt-get install alsa-utils
 # Browser: sudo apt-get install chromium-browser
 # Additional audio: sudo apt-get install pulseaudio pulseaudio-utils
@@ -39,8 +33,3 @@ Pillow>=10.0.0
 # =============================================================================
 # datetime, timedelta, os, re, time, csv, sqlite3, threading
 # urllib.parse, sys, signal, tempfile, subprocess, hashlib 
-openai
-requests 
-google-generativeai 
-playwright
-piper-tts 

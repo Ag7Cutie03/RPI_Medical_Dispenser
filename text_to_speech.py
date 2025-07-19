@@ -1,46 +1,33 @@
 import subprocess
-import time
 import os
 
-def set_max_volume():
-    """Set system volume to maximum and unmute audio jack output."""
+def speak_text(text):
+    """
+    Convert the given text to speech using piper-tts (high-quality neural TTS).
+    Works with audio jack, Bluetooth, or any audio output on Raspberry Pi.
+    Args:
+        text (str): The text to be spoken aloud.
+    """
     try:
-        subprocess.run(['amixer', 'set', 'Master', '100%'], check=True)
-        subprocess.run(['amixer', 'set', 'Master', 'unmute'], check=True)
-        # Force output to audio jack (if on Raspberry Pi)
-        subprocess.run(['amixer', 'cset', 'numid=3', '1'], check=True)
-    except Exception as e:
-        print(f"Warning: Could not set max volume or force audio jack: {e}")
+        temp_file = "/tmp/speech.wav"
+        subprocess.run(['piper', '--model', 'en_US-amy-low.onnx', '--output_file', temp_file], 
+                      input=text.encode(), check=True)
+        
+        # Play the generated audio file
+        subprocess.run(['aplay', temp_file], check=True)
+        
+        # Clean up temporary file
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+            
+    except subprocess.CalledProcessError as e:
+        print(f"Error with piper-tts: {e}")
+    except FileNotFoundError:
+        print("piper-tts not found. Please install piper-tts first.")
+        print("Installation: pip install piper-tts")
+        print("Or try: pip install piper-tts[onnx]")
 
-def speak(text, voice='en_US-amy-low', output_wav='output.wav'):
-    """
-    Use Piper TTS to synthesize speech from text and play it.
-    :param text: The text to speak.
-    :param voice: Piper voice model to use (default: en_US-amy-low).
-    :param output_wav: Output WAV file name.
-    """
-    set_max_volume()
-    time.sleep(1)  # Short wait before speaking
-    start_time = time.perf_counter()
-    # Write text to a temporary file
-    with open('tts_input.txt', 'w', encoding='utf-8') as f:
-        f.write(text)
-    # Run Piper to generate speech
-    try:
-        subprocess.run([
-            'piper',
-            '--model', f'/usr/share/piper/models/{voice}.onnx',
-            '--output_file', output_wav,
-            '--input_file', 'tts_input.txt'
-        ], check=True)
-        # Play the generated WAV file
-        subprocess.run(['aplay', output_wav], check=True)
-        elapsed = time.perf_counter() - start_time
-        print(f"[BENCHMARK] TTS synthesis and playback for '{text[:30]}...' took {elapsed:.2f} seconds.")
-    except Exception as e:
-        print(f"Piper TTS error: {e}")
-    finally:
-        if os.path.exists('tts_input.txt'):
-            os.remove('tts_input.txt')
-        if os.path.exists(output_wav):
-            os.remove(output_wav) 
+if __name__ == "__main__":
+    # Example usage: Speak a test string
+    test_text = "This is a test of the text to speech system using piper-tts through the audio jack."
+    speak_text(test_text)
