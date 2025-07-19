@@ -24,17 +24,21 @@ class ServoController:
 
     def dispense_from_tray_1(self, medicine_name):
         print(f"Dispensing from Tray 1: {medicine_name}")
+        start_time = time.perf_counter()
         self._move_servo(self.servo1, 90)  # Move to 90 degrees
         time.sleep(1)
         self._move_servo(self.servo1, 0)   # Return to 0 degrees
-        print("Dispense complete (Tray 1)")
+        elapsed = time.perf_counter() - start_time
+        print(f"Dispense complete (Tray 1). [BENCHMARK] Took {elapsed:.2f} seconds.")
 
     def dispense_from_tray_2(self, medicine_name):
         print(f"Dispensing from Tray 2: {medicine_name}")
+        start_time = time.perf_counter()
         self._move_servo(self.servo2, 90)  # Move to 90 degrees
         time.sleep(1)
         self._move_servo(self.servo2, 0)   # Return to 0 degrees
-        print("Dispense complete (Tray 2)")
+        elapsed = time.perf_counter() - start_time
+        print(f"Dispense complete (Tray 2). [BENCHMARK] Took {elapsed:.2f} seconds.")
 
     def cleanup(self):
         self.servo1.stop()
