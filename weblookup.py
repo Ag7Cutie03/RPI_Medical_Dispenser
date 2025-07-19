@@ -64,7 +64,9 @@ def fetch_intake_instructions(medicine_name):
             print(f"[BENCHMARK] fetch_intake_instructions for '{medicine_name}' (CACHED) took {time.perf_counter() - start_time:.2f} seconds.")
             print(f"[INSTRUCTIONS] {cached_instructions}")
             return cached_instructions
-    instructions = get_web_instructions(medicine_name)
+    # Always use only the brand name for scraping
+    brand_name = medicine_name.split()[0].strip().lower()
+    instructions = get_web_instructions(brand_name)
     elapsed = time.perf_counter() - start_time
     if instructions:
         MEDICINE_CACHE[medicine_name] = (current_time, instructions)
