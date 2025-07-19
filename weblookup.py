@@ -1,9 +1,7 @@
-try:
-    from playwright.sync_api import sync_playwright
-except ImportError:
-    raise ImportError("Playwright is not installed. Please install it with 'pip install playwright' and run 'playwright install'.")
 import re
 import time
+import requests
+from bs4 import BeautifulSoup
 
 # Simple in-memory cache for medicine instructions
 MEDICINE_CACHE = {}
@@ -11,70 +9,50 @@ CACHE_DURATION = 3600  # Cache for 1 hour
 
 def get_web_instructions(medicine_name):
     """
-    Scrape only the 'Indications/Uses', 'Dosage/Direction for Use', and 'Administration' sections from the MIMS Philippines drug info page for the given medicine.
-    Returns a structured summary as a string, formatted as:
-    Indications/Uses
-    > content
-    Dosage/Direction for Use
-    > content
-    Administration
+    Scrape the 'Directions' section from https://www.drugs.com/dosage/{brand_name}.html
+    Returns:
+    Directions
     > content
     """
     start_time = time.perf_counter()
     try:
-        # Use only the brand name (first word) for the MIMS URL
         brand_name = medicine_name.split()[0].strip().lower()
-        url_name = brand_name.replace(' ', '-').replace('/', '-')
-        url = f"https://www.mims.com/philippines/drug/info/{url_name}"
-        print(f"[DEBUG] MIMS URL: {url}")
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(url, timeout=30000)
-            # Remove script/style/nav/header/footer via JS
-            page.evaluate('''() => {
-                for (const tag of ['script', 'style', 'nav', 'header', 'footer']) {
-                    document.querySelectorAll(tag).forEach(e => e.remove());
-                }
-            }''')
-            # Find all headings and their following content
-            sections = {}
-            headings = page.query_selector_all('h1, h2, h3, h4, h5, h6, strong, b')
-            for heading in headings:
-                title = heading.inner_text().strip().lower()
-                if not title or len(title) > 100:
-                    continue
-                # Only match exact section titles (case-insensitive)
-                if title in ['indications/uses', 'dosage/direction for use', 'administration']:
-                    sib = heading.evaluate_handle('el => el.nextElementSibling')
-                    content = ""
-                    if sib:
-                        content = sib.evaluate('el => el.innerText').strip()
-                    if content and len(content) > 20:
-                        sections[title] = content
-            browser.close()
-            # Format output in the requested style
-            output = []
-            for key in ['indications/uses', 'dosage/direction for use', 'administration']:
-                if key in sections:
-                    output.append(f"{key.title().replace('/', '/')}\n> {sections[key]}")
-            elapsed = time.perf_counter() - start_time
-            if output:
-                result = '\n'.join(output)
-                print(f"[BENCHMARK] Web scraping for '{medicine_name}' took {elapsed:.2f} seconds.")
-                print(f"[WEBSCRAPED INSTRUCTIONS] {result}")
-                return result
-            else:
-                print(f"[BENCHMARK] Web scraping for '{medicine_name}' took {elapsed:.2f} seconds. No relevant sections found.")
-                return "No relevant sections found."
+        url = f"https://www.drugs.com/dosage/{brand_name}.html"
+        print(f"[DEBUG] Drugs.com Dosage URL: {url}")
+        response = requests.get(url, timeout=30)
+        if response.status_code != 200:
+            print(f"[ERROR] Failed to fetch {url} (status {response.status_code})")
+            return "No relevant sections found."
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Find the 'Directions' heading
+        directions_heading = soup.find(lambda tag: tag.name in ['h2', 'h3', 'h4', 'strong', 'b'] and tag.get_text(strip=True).lower() == 'directions')
+        if not directions_heading:
+            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds. No relevant sections found.")
+            return "No relevant sections found."
+        # Collect all sibling <ul>, <ol>, <p>, or text until the next heading
+        content = []
+        for sib in directions_heading.find_next_siblings():
+            sib_name = getattr(sib, 'name', None)
+            if sib_name and sib_name.startswith('h'):
+                break
+            text = sib.get_text(strip=True)
+            if text:
+                content.append(text)
+        if content:
+            result = 'Directions\n> ' + '\n> '.join(content)
+            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds.")
+            print(f"[WEBSCRAPED INSTRUCTIONS] {result}")
+            return result
+        else:
+            print(f"[BENCHMARK] Drugs.com scraping for '{medicine_name}' took {time.perf_counter() - start_time:.2f} seconds. No relevant sections found.")
+            return "No relevant sections found."
     except Exception as e:
-        elapsed = time.perf_counter() - start_time
-        print(f"Error fetching MIMS instructions: {e} (Elapsed: {elapsed:.2f}s)")
-    return None
+        print(f"Error fetching Drugs.com directions: {e}")
+        return "No relevant sections found."
 
 def fetch_intake_instructions(medicine_name):
     """
-    Fetch medicine instructions using Playwright-based web lookup. Returns instruction string or fallback message if no information is found.
+    Fetch medicine instructions using Drugs.com web lookup. Returns instruction string or fallback message if no information is found.
     Waits 5 seconds before searching to allow servo to finish dispensing.
     """
     time.sleep(5)  # Wait for servo to finish dispensing
