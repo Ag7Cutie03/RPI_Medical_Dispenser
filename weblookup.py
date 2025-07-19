@@ -18,7 +18,7 @@ def get_web_instructions(medicine_name):
     try:
         brand_name = medicine_name.split()[0].strip().lower()
         url = f"https://www.drugs.com/dosage/{brand_name}.html"
-        print(f"[DEBUG] Drugs.com Dosage URL: {url}")
+        print(f"[Drugs.com Dosage URL: {url}")
         response = requests.get(url, timeout=30)
         if response.status_code != 200:
             print(f"[ERROR] Failed to fetch {url} (status {response.status_code})")
@@ -64,8 +64,9 @@ def fetch_intake_instructions(medicine_name):
             print(f"[BENCHMARK] fetch_intake_instructions for '{medicine_name}' (CACHED) took {time.perf_counter() - start_time:.2f} seconds.")
             print(f"[INSTRUCTIONS] {cached_instructions}")
             return cached_instructions
-    # Always use only the brand name for scraping
-    brand_name = medicine_name.split()[0].strip().lower()
+    # Remove dosage strength and form info before extracting brand name
+    cleaned_name = re.sub(r"(\d+\s*mg(?:/\d+\s*ml)?|\d+\s*ml|mg|ml|suspension|tablet|tab|capsule|cap|syrup|solution|\d+mg/\d+ml)", "", medicine_name, flags=re.IGNORECASE).strip()
+    brand_name = cleaned_name.split()[0].strip().lower() if cleaned_name else medicine_name.split()[0].strip().lower()
     instructions = get_web_instructions(brand_name)
     elapsed = time.perf_counter() - start_time
     if instructions:
