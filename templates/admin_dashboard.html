@@ -420,7 +420,7 @@
 
         function changeUserPassword(username) {
             if (confirm('Are you sure you want to change the password for ' + username + '?')) {
-                fetch('{{ url_for("admin_change_password") }}', {
+                fetch('{{ url_for("admin_reset_password") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

@@ -213,10 +213,16 @@ default_system_settings = {
 
 # Import medicine web lookup
 try:
-    from weblookup import test_mims, test_all_sources
+    from weblookup import get_directions_from_drugs_com, get_directions_and_speak
     print("✓ Medicine weblookup imported successfully")
 except Exception as e:
     print(f"Medicine weblookup import failed: {e}")
+    # Define dummy functions if import fails
+    def get_directions_from_drugs_com(medicine_name):
+        return f"Directions not available for {medicine_name}"
+    
+    def get_directions_and_speak(medicine_name):
+        return f"Directions not available for {medicine_name}"
 
 @app.route('/')
 def homepage():
@@ -1128,6 +1134,44 @@ def admin_reset_password():
     
     return redirect(url_for('dashboard'))
 
+@app.route('/admin_change_password', methods=['POST'])
+def admin_change_password():
+    if 'user_id' not in session:
+        flash('Please log in to access this page.', 'danger')
+        return redirect(url_for('login'))
+    
+    is_admin = session.get('is_admin', False)
+    if not is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    username = request.form.get('username', '')
+    new_password = request.form.get('new_password', '')
+    
+    if not username or not new_password:
+        flash('Username and new password are required.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    
+    try:
+        import hashlib
+        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+        
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET password = ? WHERE username = ?', (hashed_password, username))
+        
+        if cursor.rowcount > 0:
+            conn.commit()
+            flash(f'Password for user {username} has been changed successfully.', 'success')
+        else:
+            flash(f'User {username} not found.', 'warning')
+        
+        conn.close()
+    except Exception as e:
+        flash(f'Error changing password: {e}', 'danger')
+    
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/emergency_reset_admin', methods=['GET', 'POST'])
 def emergency_reset_admin():
     """Emergency route to reset admin password - use only if locked out"""
@@ -1190,6 +1234,11 @@ if __name__ == '__main__':
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Start background dispensing thread
+    dispensing_thread = threading.Thread(target=get_tray, daemon=True)
+    dispensing_thread.start()
+    print("✓ Background dispensing thread started")
     
     # Start Flask app in a separate thread to allow display to work
     from threading import Thread
