@@ -1,5 +1,6 @@
 import requests
 import subprocess
+import re
 
 def fetch_fda_instruction(brand_name):
     url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{brand_name}&limit=1"
@@ -17,11 +18,16 @@ def fetch_fda_instruction(brand_name):
     except Exception as e:
         return f"Error fetching instructions: {e}"
 
+def clean_directions(text):
+    # Remove repeated 'Directions' or similar at the start
+    cleaned = re.sub(r'^(Directions\s*)+', '', text, flags=re.IGNORECASE).strip()
+    return cleaned
+
 def get_directions_and_speak(brand_name):
     directions = fetch_fda_instruction(brand_name)
+    cleaned = clean_directions(directions)
     try:
-        # Use espeak-ng with female voice 5
-        subprocess.run(["espeak-ng", "-v", "en+f5", directions], check=True)
+        subprocess.run(["espeak-ng", "-v", "en+f5", "-s", "165", cleaned], check=True)
     except Exception as e:
-        directions += f"\n(TTS error: {e})"
-    return directions
+        cleaned += f"\n(TTS error: {e})"
+    return cleaned
