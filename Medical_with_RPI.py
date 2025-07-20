@@ -8,6 +8,7 @@ import spidev
 
 # Import RPi servo controller
 from rpi_servo import get_servo_controller, cleanup_servo_controller
+from weblookup import get_directions_and_speak
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')
@@ -762,7 +763,7 @@ DatabaseManager.migrate_passwords()
 
 # Import medicine drug information lookup (DrugBank API)
 try:
-    from weblookup import get_directions_from_drugs_com, get_directions_and_speak
+    from weblookup import get_directions_from_drugs_com
     print("✓ DrugBank API medicine lookup imported successfully")
 except Exception as e:
     print(f"DrugBank API medicine lookup import failed: {e}")
