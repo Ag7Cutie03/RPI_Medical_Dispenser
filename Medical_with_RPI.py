@@ -406,7 +406,7 @@ class DispenseManager:
                 print("Fetching drug information and speaking it...")
                 # Extract just the brand name for drug lookup (remove dosage info)
                 brand_name = medicine_name.split()[0]  # Take first word as brand name
-                drug_info = get_directions_and_speak(brand_name)
+                drug_info = get_directions_and_speak(brand_name, 1)
                 print(f"Drug information for {brand_name}: {drug_info}")
             except Exception as e:
                 print(f"Error getting drug information: {e}")
@@ -446,7 +446,7 @@ class DispenseManager:
                 print("Fetching drug information and speaking it...")
                 # Extract just the brand name for drug lookup (remove dosage info)
                 brand_name = medicine_name.split()[0]  # Take first word as brand name
-                drug_info = get_directions_and_speak(brand_name)
+                drug_info = get_directions_and_speak(brand_name, 2)
                 print(f"Drug information for {brand_name}: {drug_info}")
             except Exception as e:
                 print(f"Error getting drug information: {e}")
