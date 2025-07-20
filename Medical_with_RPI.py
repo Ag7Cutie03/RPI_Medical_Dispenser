@@ -766,12 +766,6 @@ try:
     print("✓ DrugBank API medicine lookup imported successfully")
 except Exception as e:
     print(f"DrugBank API medicine lookup import failed: {e}")
-    # Define dummy functions if import fails
-    def get_directions_from_drugs_com(medicine_name):
-        return f"Drug information not available for {medicine_name}"
-    
-    def get_directions_and_speak(medicine_name):
-        return f"Drug information not available for {medicine_name}"
 
 # Route Handlers - Authentication Routes
 @app.route('/')

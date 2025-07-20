@@ -11,6 +11,8 @@ requests>=2.31.0
 urllib3>=2.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
+requests
+pyttsx3
 
 # Text-to-Speech
 piper-tts[onnx]>=1.2.0
