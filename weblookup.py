@@ -1,6 +1,7 @@
 import requests
-import subprocess
 import re
+from gtts import gTTS
+import os
 
 def fetch_fda_instruction(brand_name):
     url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{brand_name}&limit=1"
@@ -27,7 +28,10 @@ def get_directions_and_speak(brand_name):
     directions = fetch_fda_instruction(brand_name)
     cleaned = clean_directions(directions)
     try:
-        subprocess.run(["espeak-ng", "-v", "en+f5", "-s", "165", cleaned], check=True)
+        tts = gTTS(text=cleaned, lang='en', slow=False)
+        tts.save("speak.mp3")
+        os.system("mpg123 speak.mp3")
+        os.remove("speak.mp3")
     except Exception as e:
         cleaned += f"\n(TTS error: {e})"
     return cleaned
