@@ -6,6 +6,15 @@
 Flask>=2.3.0
 Werkzeug>=2.3.0
 
+# HTTP Requests and Web Scraping
+requests>=2.31.0
+urllib3>=2.0.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Text-to-Speech
+piper-tts[onnx]>=1.2.0
+
 # Raspberry Pi Hardware Control
 RPi.GPIO>=0.7.0
 spidev>=3.6
