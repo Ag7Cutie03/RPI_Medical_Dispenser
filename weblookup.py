@@ -18,28 +18,54 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def speak_text(text):
     """
     Convert the given text to speech using piper-tts (high-quality neural TTS).
-    Works with audio jack, Bluetooth, or any audio output on Raspberry Pi.
+    Falls back to espeak if piper-tts is not available.
     Args:
         text (str): The text to be spoken aloud.
     """
     try:
+        # Try piper-tts first
         temp_file = "/tmp/speech.wav"
-        subprocess.run(['piper', '--model', 'en_US-amy-low.onnx', '--output_file', temp_file], 
-                      input=text.encode(), check=True)
         
-        # Play the generated audio file
-        subprocess.run(['aplay', temp_file], check=True)
+        # Try different voice models that might be available
+        voice_models = [
+            'en_US-amy-low.onnx',
+            'en_US-amy-medium.onnx', 
+            'en_US-amy-high.onnx',
+            'en_US-amy.onnx'
+        ]
         
-        # Clean up temporary file
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        piper_success = False
+        for model in voice_models:
+            try:
+                subprocess.run(['piper', '--model', model, '--output_file', temp_file], 
+                              input=text.encode(), check=True, timeout=30)
+                piper_success = True
+                print(f"✓ Using piper-tts with model: {model}")
+                break
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                continue
+        
+        if piper_success:
+            # Play the generated audio file
+            subprocess.run(['aplay', temp_file], check=True)
+            
+            # Clean up temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        else:
+            # Fallback to espeak
+            print("piper-tts not available, using espeak fallback...")
+            subprocess.run(['espeak', text], check=True)
             
     except subprocess.CalledProcessError as e:
-        print(f"Error with piper-tts: {e}")
+        print(f"Error with text-to-speech: {e}")
+        # Final fallback - just print the text
+        print(f"TEXT-TO-SPEECH: {text}")
     except FileNotFoundError:
-        print("piper-tts not found. Please install piper-tts first.")
-        print("Installation: pip install piper-tts")
-        print("Or try: pip install piper-tts[onnx]")
+        print("No text-to-speech system found. Installing piper-tts voices:")
+        print("Run: piper --download-voice en_US-amy-low.onnx")
+        print("Or install espeak: sudo apt-get install espeak")
+        print(f"TEXT-TO-SPEECH: {text}")
 
 class MedicineLookup:
     """Comprehensive medicine lookup system for multiple sources"""
@@ -183,13 +209,31 @@ class MedicineLookup:
         """Extract dosage information from text"""
         dosage_info = []
         
-        # Common dosage patterns
+        # Enhanced dosage patterns
         dosage_patterns = [
+            # Strength patterns
             r'(\d+(?:\.\d+)?)\s*(mg|g|ml|mcg|IU|units?)\b',  # 500mg, 1g, 10ml
             r'(\d+(?:\.\d+)?)\s*(milligram|gram|milliliter|microgram)s?\b',  # full words
+            
+            # Form patterns
             r'(\d+(?:\.\d+)?)\s*(tablet|capsule|pill|dose)s?\b',  # tablets/capsules
+            r'(\d+(?:\.\d+)?)\s*(ml|milliliter)s?\b',  # liquid forms
+            
+            # Frequency patterns
             r'(\d+(?:\.\d+)?)\s*(times?|x)\s*(daily|per day|a day)',  # frequency
+            r'(\d+(?:\.\d+)?)\s*(times?|x)\s*(hour|hr)s?\b',  # hourly frequency
+            
+            # Timing patterns
+            r'every\s+(\d+(?:\.\d+)?)\s*(hour|hr)s?\b',  # every 4 hours
             r'(\d+(?:\.\d+)?)\s*(hour|hr)s?\b',  # timing
+            
+            # Dosage instructions
+            r'(\d+(?:\.\d+)?)\s*(mg|g|ml)\s*(every|per|daily)',  # dosage with timing
+            r'(\d+(?:\.\d+)?)\s*(tablet|capsule)s?\s*(every|per|daily)',  # tablets with timing
+            
+            # Common dosage phrases
+            r'(\d+(?:\.\d+)?)\s*(mg|g|ml)\s*(once|twice|three times)\s*(daily|a day)',  # specific frequency
+            r'(\d+(?:\.\d+)?)\s*(tablet|capsule)s?\s*(once|twice|three times)\s*(daily|a day)',  # tablets with frequency
         ]
         
         for pattern in dosage_patterns:
@@ -198,7 +242,7 @@ class MedicineLookup:
                 dosage_info.append(match.group(0))
         
         # Remove duplicates and limit results
-        unique_dosages = list(set(dosage_info))[:5]  # Limit to 5 unique dosages
+        unique_dosages = list(set(dosage_info))[:8]  # Increased limit to 8 unique dosages
         
         return unique_dosages if unique_dosages else None
     
@@ -360,6 +404,11 @@ def get_directions_and_speak(medicine_name):
         if result.get('dosage'):
             dosage_text = f" Dosage information includes: {', '.join(result['dosage'][:3])}."
             speech_text += dosage_text
+        else:
+            # Add generic dosage advice for common medicines
+            generic_dosage = get_generic_dosage_advice(result['name'])
+            if generic_dosage:
+                speech_text += f" {generic_dosage}"
         
         # Add source information
         if result['source'] != 'System':
@@ -376,6 +425,26 @@ def get_directions_and_speak(medicine_name):
         print(f"Speaking error message: {error_text}")
         speak_text(error_text)
         return result
+
+def get_generic_dosage_advice(medicine_name):
+    """Provide generic dosage advice for common medicines when specific dosage is not found"""
+    medicine_lower = medicine_name.lower()
+    
+    generic_advice = {
+        'advil': "Advil typically contains ibuprofen. Common dosage is 200 to 400 milligrams every 4 to 6 hours as needed.",
+        'ibuprofen': "Common dosage is 200 to 400 milligrams every 4 to 6 hours as needed.",
+        'paracetamol': "Common dosage is 500 to 1000 milligrams every 4 to 6 hours as needed.",
+        'acetaminophen': "Common dosage is 500 to 1000 milligrams every 4 to 6 hours as needed.",
+        'aspirin': "Common dosage is 325 to 650 milligrams every 4 to 6 hours as needed.",
+        'amoxicillin': "Dosage varies by condition. Typically 250 to 500 milligrams three times daily.",
+        'omeprazole': "Common dosage is 20 milligrams once daily before meals."
+    }
+    
+    for key, advice in generic_advice.items():
+        if key in medicine_lower:
+            return advice
+    
+    return None
 
 def test_medicine_lookup(medicine_name):
     """Test function to verify medicine lookup functionality"""
@@ -396,6 +465,10 @@ def test_medicine_lookup(medicine_name):
                 print(f"  {i}. {dosage}")
         else:
             print("Dosage Information: Not available")
+            # Try generic advice
+            generic_advice = get_generic_dosage_advice(result['name'])
+            if generic_advice:
+                print(f"Generic Dosage Advice: {generic_advice}")
         
         print(f"URL: {result['url']}")
         
@@ -404,6 +477,10 @@ def test_medicine_lookup(medicine_name):
         speech_text = f"Information for {result['name']}. {result['description'][:200]}..."
         if result.get('dosage'):
             speech_text += f" Dosage information includes: {', '.join(result['dosage'][:2])}."
+        else:
+            generic_advice = get_generic_dosage_advice(result['name'])
+            if generic_advice:
+                speech_text += f" {generic_advice}"
         speak_text(speech_text)
         
     else:
@@ -463,6 +540,11 @@ def get_medicine_with_dosage(medicine_name):
                 summary_parts.append(f"Timing: {', '.join(dosage_types['timing'][:2])}")
             
             output['dosage_summary'] = ' | '.join(summary_parts) if summary_parts else 'Dosage information available'
+        else:
+            # Add generic advice if available
+            generic_advice = get_generic_dosage_advice(result['name'])
+            if generic_advice:
+                output['dosage_summary'] = f"Generic Advice: {generic_advice}"
         
         return output
     else:
